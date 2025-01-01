@@ -1,20 +1,35 @@
+#load "key"
+
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
+[Flags]
+public enum Modifiers : uint
+{
+  None = 0,
+  Alt = 1,
+  Control = 2,
+  Ctrl = Control,
+  Shift = 4,
+  Windows = 8,
+  Win = Windows,
+  NoRepeat = 0x4000
+}
+
 public class HotKeyEventArgs : EventArgs
 {
   public int Id { get; }
-  public uint Modifiers { get; }
-  public uint VKey { get; }
+  public Modifiers Modifiers { get; }
+  public Key Key { get; }
 
-  internal HotKeyEventArgs(int id, uint modifiers, uint vk)
+  internal HotKeyEventArgs(int id, Modifiers modifiers, Key key)
   {
     Id = id;
     Modifiers = modifiers;
-    VKey = vk;
+    Key = key;
   }
 }
 
@@ -169,9 +184,10 @@ public class HotKey : IDisposable
 
     int id = unchecked((int)msg.wParam);
     long lparam = (long)msg.lParam;
-    uint modifiers = unchecked((uint)((lparam >> 16) & 0xffff));
+    Modifiers modifiers = (Modifiers)(unchecked((uint)((lparam >> 16) & 0xffff)));
     uint vk = unchecked((uint)(lparam & 0xffff));
-    HotKeyEventArgs args = new(id, modifiers, vk);
+    Key key = KeyFromVirtualKey(unchecked((int)vk));
+    HotKeyEventArgs args = new(id, modifiers, key);
     signal_.Set();
     KeyPressed?.Invoke(this, args);
   }
